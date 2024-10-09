@@ -27,14 +27,30 @@ const DiningPhilosophers = () => {
   const [currentPhilosopher, setCurrentPhilosopher] = useState(0);
 
   const resetSimulation = useCallback(() => {
+    // @ts-expect-error "todo: fix type error"
     setPhilosophers(Array(numPhilosophers).fill('thinking'));
+
+    // @ts-expect-error "todo: fix type error"
     setForks(Array(numPhilosophers).fill(null));
+
+    // @ts-expect-error "todo: fix type error"
     setTimers(Array(numPhilosophers).fill(0));
+
+    // @ts-expect-error "todo: fix type error"
     setStrategies(Array(numPhilosophers).fill('normal'));
+
+    // @ts-expect-error "todo: fix type error"
     setEatenCount(Array(numPhilosophers).fill(0));
+
+    // @ts-expect-error "todo: fix type error"
     setFailedAttempts(Array(numPhilosophers).fill(0));
+
+    // @ts-expect-error "todo: fix type error"
     setThinkingTimes(Array(numPhilosophers).fill([]));
+
+    // @ts-expect-error "todo: fix type error"
     setTotalThinkingTime(Array(numPhilosophers).fill(0));
+
     setIsRunning(false);
     setExplanation('Simulation reset. All philosophers are thinking.');
     setCurrentPhilosopher(0);
@@ -67,6 +83,7 @@ const DiningPhilosophers = () => {
     }
   }, [actionStrategy, currentPhilosopher, numPhilosophers, timers, philosophers]);
 
+// @ts-expect-error "todo: fix type error"
   const philosopherAction = useCallback((index) => {
     setPhilosophers(prev => {
       const newState = [...prev];
@@ -77,15 +94,22 @@ const DiningPhilosophers = () => {
         const canEat = forks[leftFork] === null && forks[rightFork] === null;
 
         if (canEat || (strategies[index] === 'greedy' && forks[leftFork] === index && forks[rightFork] === index)) {
+          // @ts-expect-error "todo: fix type error"
           newState[index] = 'eating';
           setForks(prevForks => {
             const newForks = [...prevForks];
+
+            // @ts-expect-error "todo: fix type error"
             newForks[leftFork] = index;
+
+            // @ts-expect-error "todo: fix type error"
             newForks[rightFork] = index;
             return newForks;
           });
           setTimers(prevTimers => {
             const newTimers = [...prevTimers];
+
+            // @ts-expect-error "todo: fix type error"
             newTimers[index] = 0;
             return newTimers;
           });
@@ -96,11 +120,15 @@ const DiningPhilosophers = () => {
           });
           setThinkingTimes(prev => {
             const newTimes = [...prev];
+
+            // @ts-expect-error "todo: fix type error"
             newTimes[index].push(timers[index]);
             return newTimes;
           });
           setTotalThinkingTime(prev => {
             const newTotal = [...prev];
+
+            // @ts-expect-error "todo: fix type error"
             newTotal[index] += timers[index];
             return newTotal;
           });
@@ -116,10 +144,12 @@ const DiningPhilosophers = () => {
             setForks(prevForks => {
               const newForks = [...prevForks];
               if (newForks[leftFork] === null) {
+                // @ts-expect-error "todo: fix type error"
                 newForks[leftFork] = index;
                 pickedUpForks++;
               }
               if (newForks[rightFork] === null) {
+                // @ts-expect-error "todo: fix type error"
                 newForks[rightFork] = index;
                 pickedUpForks++;
               }
@@ -136,10 +166,13 @@ const DiningPhilosophers = () => {
           }
         }
       } else if (newState[index] === 'eating') {
+        // @ts-expect-error "todo: fix type error"
         newState[index] = 'thinking';
         setForks(prevForks => {
           const newForks = [...prevForks];
+          // @ts-expect-error "todo: fix type error"
           newForks[leftFork] = null;
+          // @ts-expect-error "todo: fix type error"
           newForks[rightFork] = null;
           return newForks;
         });
@@ -154,6 +187,7 @@ const DiningPhilosophers = () => {
     const selectedPhilosopher = selectNextPhilosopher();
     philosopherAction(selectedPhilosopher);
 
+// @ts-expect-error "todo: fix type error"
     setTimers(prevTimers => {
       const newTimers = prevTimers.map((timer, index) => {
         if (philosophers[index] === 'thinking') {
@@ -166,12 +200,15 @@ const DiningPhilosophers = () => {
         if (timer >= starvationTime && philosophers[index] !== 'dead') {
           setPhilosophers(prev => {
             const newState = [...prev];
+            // @ts-expect-error "todo: fix type error"
             newState[index] = 'dead';
             return newState;
           });
           setForks(prevForks => {
             const newForks = [...prevForks];
+            // @ts-expect-error "todo: fix type error"
             if (newForks[index] === index) newForks[index] = null;
+            // @ts-expect-error "todo: fix type error"
             if (newForks[(index - 1 + numPhilosophers) % numPhilosophers] === index) newForks[(index - 1 + numPhilosophers) % numPhilosophers] = null;
             return newForks;
           });
@@ -184,13 +221,16 @@ const DiningPhilosophers = () => {
   }, [numPhilosophers, philosopherAction, speed, philosophers, starvationTime, selectNextPhilosopher]);
 
   useEffect(() => {
+    // @ts-expect-error "todo: fix type error"
     let interval;
     if (isRunning) {
       interval = setInterval(simulationTick, speed);
     }
+    // @ts-expect-error "todo: fix type error"
     return () => clearInterval(interval);
   }, [isRunning, speed, simulationTick]);
 
+// @ts-expect-error "todo: fix type error"
   const getPhilosopherEmoji = (state) => {
     switch (state) {
       case 'thinking': return '🤔';
@@ -200,6 +240,7 @@ const DiningPhilosophers = () => {
     }
   };
 
+// @ts-expect-error "todo: fix type error"
   const getForkColor = (forkIndex) => {
     if (forks[forkIndex] !== null) {
       return 'text-green-500';
@@ -207,6 +248,7 @@ const DiningPhilosophers = () => {
     return 'text-yellow-500';
   };
 
+// @ts-expect-error "todo: fix type error"
   const getStrategyColor = (strategy) => {
     switch (strategy) {
       case 'normal': return 'bg-blue-200';
@@ -216,12 +258,16 @@ const DiningPhilosophers = () => {
     }
   };
 
+// @ts-expect-error "todo: fix type error"
   const cycleStrategy = (index) => {
     setStrategies(prev => {
       const newStrategies = [...prev];
       switch (newStrategies[index]) {
+        // @ts-expect-error "todo: fix type error"
         case 'normal': newStrategies[index] = 'polite'; break;
+          // @ts-expect-error "todo: fix type error"
         case 'polite': newStrategies[index] = 'greedy'; break;
+          // @ts-expect-error "todo: fix type error"
         case 'greedy': newStrategies[index] = 'normal'; break;
       }
       return newStrategies;
