@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Play, Pause, RotateCcw, StepForward } from 'lucide-react';
 
 const DiningPhilosophers = () => {
@@ -12,147 +11,119 @@ const DiningPhilosophers = () => {
   const [timers, setTimers] = useState([]);
   const [strategies, setStrategies] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [speed, setSpeed] = useState(1000);
-  const [starvationTime, setStarvationTime] = useState(10);
+  const [speed, setSpeed] = useState(1000); // milliseconds between actions
+  const [starvationTime, setStarvationTime] = useState(10); // seconds before starvation
   const [explanation, setExplanation] = useState('Simulation not started');
-  
-  // New state variables for statistics
-  const [eatenCount, setEatenCount] = useState([]);
-  const [failedAttempts, setFailedAttempts] = useState([]);
-  const [thinkingTimes, setThinkingTimes] = useState([]);
-  const [totalThinkingTime, setTotalThinkingTime] = useState([]);
-
-  // New state for action strategy
-  const [actionStrategy, setActionStrategy] = useState('random');
-  const [currentPhilosopher, setCurrentPhilosopher] = useState(0);
 
   const resetSimulation = useCallback(() => {
     setPhilosophers(Array(numPhilosophers).fill('thinking'));
     setForks(Array(numPhilosophers).fill(null));
     setTimers(Array(numPhilosophers).fill(0));
     setStrategies(Array(numPhilosophers).fill('normal'));
-    setEatenCount(Array(numPhilosophers).fill(0));
-    setFailedAttempts(Array(numPhilosophers).fill(0));
-    setThinkingTimes(Array(numPhilosophers).fill([]));
-    setTotalThinkingTime(Array(numPhilosophers).fill(0));
     setIsRunning(false);
     setExplanation('Simulation reset. All philosophers are thinking.');
-    setCurrentPhilosopher(0);
   }, [numPhilosophers]);
 
   useEffect(() => {
     resetSimulation();
   }, [numPhilosophers, resetSimulation]);
 
-  const selectNextPhilosopher = useCallback(() => {
-    switch (actionStrategy) {
-      case 'random':
-        return Math.floor(Math.random() * numPhilosophers);
-      case 'round-robin':
-        const next = (currentPhilosopher + 1) % numPhilosophers;
-        setCurrentPhilosopher(next);
-        return next;
-      case 'prioritize-starving':
-        let maxTimer = -1;
-        let starvingPhilosopher = 0;
-        timers.forEach((timer, index) => {
-          if (philosophers[index] === 'thinking' && timer > maxTimer) {
-            maxTimer = timer;
-            starvingPhilosopher = index;
-          }
+const philosopherAction = useCallback((index) => {
+  setPhilosophers(prev => {
+    const newState = [...prev];
+    const leftFork = index;
+    const rightFork = (index - 1 + numPhilosophers) % numPhilosophers;
+
+    // Check if the philosopher is currently thinking
+    if (newState[index] === 'thinking') {
+      // Determine if both forks are available
+      const canEat = forks[leftFork] === null && forks[rightFork] === null;
+
+      // If both forks are available, start eating
+      if (canEat) {
+        newState[index] = 'eating';
+        setForks(prevForks => {
+          const newForks = [...prevForks];
+          newForks[leftFork] = index; // Pick up left fork
+          newForks[rightFork] = index; // Pick up right fork
+          return newForks;
         });
-        return starvingPhilosopher;
-      default:
-        return 0;
-    }
-  }, [actionStrategy, currentPhilosopher, numPhilosophers, timers, philosophers]);
-
-  const philosopherAction = useCallback((index) => {
-    setPhilosophers(prev => {
-      const newState = [...prev];
-      const leftFork = index;
-      const rightFork = (index - 1 + numPhilosophers) % numPhilosophers;
-
-      if (newState[index] === 'thinking') {
-        const canEat = forks[leftFork] === null && forks[rightFork] === null;
-
-        if (canEat || (strategies[index] === 'greedy' && forks[leftFork] === index && forks[rightFork] === index)) {
-          newState[index] = 'eating';
-          setForks(prevForks => {
-            const newForks = [...prevForks];
-            newForks[leftFork] = index;
-            newForks[rightFork] = index;
-            return newForks;
-          });
-          setTimers(prevTimers => {
-            const newTimers = [...prevTimers];
-            newTimers[index] = 0;
-            return newTimers;
-          });
-          setEatenCount(prev => {
-            const newCount = [...prev];
-            newCount[index]++;
-            return newCount;
-          });
-          setThinkingTimes(prev => {
-            const newTimes = [...prev];
-            newTimes[index].push(timers[index]);
-            return newTimes;
-          });
-          setTotalThinkingTime(prev => {
-            const newTotal = [...prev];
-            newTotal[index] += timers[index];
-            return newTotal;
-          });
-          setExplanation(`Philosopher ${index + 1} started eating.`);
-        } else {
-          setFailedAttempts(prev => {
-            const newAttempts = [...prev];
-            newAttempts[index]++;
-            return newAttempts;
-          });
-          if (strategies[index] === 'greedy') {
-            let pickedUpForks = 0;
+        setTimers(prevTimers => {
+          const newTimers = [...prevTimers];
+          newTimers[index] = 0; // Reset timer for the philosopher
+          return newTimers;
+        });
+        setExplanation(`Philosopher ${index + 1} started eating.`);
+      } else {
+        // Handling for greedy philosophers trying to pick up forks
+        if (strategies[index] === 'greedy') {
+          if (forks[leftFork] === null) {
             setForks(prevForks => {
               const newForks = [...prevForks];
-              if (newForks[leftFork] === null) {
-                newForks[leftFork] = index;
-                pickedUpForks++;
-              }
-              if (newForks[rightFork] === null) {
-                newForks[rightFork] = index;
-                pickedUpForks++;
-              }
+              newForks[leftFork] = index; // Pick up left fork
               return newForks;
             });
 
-            if (pickedUpForks === 1) {
-              setExplanation(`Greedy Philosopher ${index + 1} picked up one fork and is waiting for the other.`);
-            } else {
-              setExplanation(`Greedy Philosopher ${index + 1} is waiting for both forks.`);
-            }
+            setExplanation(`Greedy Philosopher ${index + 1} picked up left fork and is waiting for right fork.`);
+          } else if (forks[rightFork] === null) {
+            setForks(prevForks => {
+              const newForks = [...prevForks];
+              newForks[rightFork] = index; // Pick up right fork
+              return newForks;
+            });
+
+            setExplanation(`Greedy Philosopher ${index + 1} picked up right fork and is waiting for left fork.`);
+            
           } else {
-            setExplanation(`Philosopher ${index + 1} tried to eat but couldn't get both forks.`);
+            // This means both forks are taken, and they can't eat
+            setExplanation(`Greedy Philosopher ${index + 1} is waiting for both forks.`);
           }
+        } else {
+          // Non-greedy philosopher behavior when unable to eat
+          setExplanation(`Philosopher ${index + 1} tried to eat but couldn't get both forks.`);
         }
-      } else if (newState[index] === 'eating') {
-        newState[index] = 'thinking';
-        setForks(prevForks => {
-          const newForks = [...prevForks];
-          newForks[leftFork] = null;
-          newForks[rightFork] = null;
-          return newForks;
-        });
-        setExplanation(`Philosopher ${index + 1} finished eating and is now thinking.`);
       }
 
-      return newState;
-    });
-  }, [forks, numPhilosophers, strategies, timers]);
+      // Determine if both forks are available
+      const canEat2 = forks[leftFork] === null && forks[rightFork] === null;
+
+      if (canEat2) {
+        newState[index] = 'eating';
+        setForks(prevForks => {
+          const newForks = [...prevForks];
+          newForks[leftFork] = index; // Pick up left fork
+          newForks[rightFork] = index; // Pick up right fork
+          return newForks;
+        });
+        setTimers(prevTimers => {
+          const newTimers = [...prevTimers];
+          newTimers[index] = 0; // Reset timer for the philosopher
+          return newTimers;
+        });
+        setExplanation(`Philosopher ${index + 1} started eating.`);
+      }
+
+    } else if (newState[index] === 'eating') {
+      // Philosopher finishes eating and puts down both forks
+      newState[index] = 'thinking';
+      setForks(prevForks => {
+        const newForks = [...prevForks];
+        newForks[leftFork] = null; // Put down left fork
+        newForks[rightFork] = null; // Put down right fork
+        return newForks;
+      });
+      setExplanation(`Philosopher ${index + 1} finished eating and is now thinking.`);
+    }
+
+    return newState;
+  });
+}, [forks, numPhilosophers, strategies]);
+
+
 
   const simulationTick = useCallback(() => {
-    const selectedPhilosopher = selectNextPhilosopher();
-    philosopherAction(selectedPhilosopher);
+    const randomPhilosopher = Math.floor(Math.random() * numPhilosophers);
+    philosopherAction(randomPhilosopher);
 
     setTimers(prevTimers => {
       const newTimers = prevTimers.map((timer, index) => {
@@ -181,7 +152,7 @@ const DiningPhilosophers = () => {
 
       return newTimers;
     });
-  }, [numPhilosophers, philosopherAction, speed, philosophers, starvationTime, selectNextPhilosopher]);
+  }, [numPhilosophers, philosopherAction, speed, philosophers, starvationTime]);
 
   useEffect(() => {
     let interval;
@@ -310,7 +281,9 @@ const DiningPhilosophers = () => {
                   {owner + 1}
                 </div>
               )}
-              
+              <div className="text-xs mt-1">
+                {leftPhilosopher + 1}/{rightPhilosopher + 1}
+              </div>
             </div>
           );
         })}
@@ -346,55 +319,6 @@ const DiningPhilosophers = () => {
           <StepForward size={20} />
           <span className="ml-2">Step</span>
         </button>
-      </div>
-      <div className="mb-4">
-        <label className="block mb-2">Action Strategy:</label>
-        <Select value={actionStrategy} onValueChange={setActionStrategy}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select strategy" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="random">Random</SelectItem>
-            <SelectItem value="round-robin">Round-Robin</SelectItem>
-            <SelectItem value="prioritize-starving">Prioritize Starving</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="mt-4 p-4 bg-gray-100 rounded">
-        <h2 className="text-lg font-semibold mb-2">Debug Information</h2>
-        <div>
-          <strong>Forks:</strong> [{forks.map(f => f === null ? 'null' : f + 1).join(', ')}]
-        </div>
-        <div>
-          <strong>Philosophers:</strong> [{philosophers.join(', ')}]
-        </div>
-      </div>
-      <div className="mt-4 p-4 bg-gray-100 rounded">
-        <h2 className="text-lg font-semibold mb-2">Statistics</h2>
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th>Philosopher</th>
-              <th>Times Eaten</th>
-              <th>Failed Attempts</th>
-              <th>Avg. Thinking Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {philosophers.map((_, index) => (
-              <tr key={index}>
-                <td>{index + 1}</td>
-                <td>{eatenCount[index]}</td>
-                <td>{failedAttempts[index]}</td>
-                <td>
-                  {eatenCount[index] > 0
-                    ? (totalThinkingTime[index] / eatenCount[index]).toFixed(2)
-                    : 'N/A'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );

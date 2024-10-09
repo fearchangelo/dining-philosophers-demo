@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Play, Pause, RotateCcw, StepForward } from 'lucide-react';
 
 const DiningPhilosophers = () => {
@@ -22,10 +21,6 @@ const DiningPhilosophers = () => {
   const [thinkingTimes, setThinkingTimes] = useState([]);
   const [totalThinkingTime, setTotalThinkingTime] = useState([]);
 
-  // New state for action strategy
-  const [actionStrategy, setActionStrategy] = useState('random');
-  const [currentPhilosopher, setCurrentPhilosopher] = useState(0);
-
   const resetSimulation = useCallback(() => {
     setPhilosophers(Array(numPhilosophers).fill('thinking'));
     setForks(Array(numPhilosophers).fill(null));
@@ -37,35 +32,11 @@ const DiningPhilosophers = () => {
     setTotalThinkingTime(Array(numPhilosophers).fill(0));
     setIsRunning(false);
     setExplanation('Simulation reset. All philosophers are thinking.');
-    setCurrentPhilosopher(0);
   }, [numPhilosophers]);
 
   useEffect(() => {
     resetSimulation();
   }, [numPhilosophers, resetSimulation]);
-
-  const selectNextPhilosopher = useCallback(() => {
-    switch (actionStrategy) {
-      case 'random':
-        return Math.floor(Math.random() * numPhilosophers);
-      case 'round-robin':
-        const next = (currentPhilosopher + 1) % numPhilosophers;
-        setCurrentPhilosopher(next);
-        return next;
-      case 'prioritize-starving':
-        let maxTimer = -1;
-        let starvingPhilosopher = 0;
-        timers.forEach((timer, index) => {
-          if (philosophers[index] === 'thinking' && timer > maxTimer) {
-            maxTimer = timer;
-            starvingPhilosopher = index;
-          }
-        });
-        return starvingPhilosopher;
-      default:
-        return 0;
-    }
-  }, [actionStrategy, currentPhilosopher, numPhilosophers, timers, philosophers]);
 
   const philosopherAction = useCallback((index) => {
     setPhilosophers(prev => {
@@ -151,8 +122,8 @@ const DiningPhilosophers = () => {
   }, [forks, numPhilosophers, strategies, timers]);
 
   const simulationTick = useCallback(() => {
-    const selectedPhilosopher = selectNextPhilosopher();
-    philosopherAction(selectedPhilosopher);
+    const randomPhilosopher = Math.floor(Math.random() * numPhilosophers);
+    philosopherAction(randomPhilosopher);
 
     setTimers(prevTimers => {
       const newTimers = prevTimers.map((timer, index) => {
@@ -181,7 +152,7 @@ const DiningPhilosophers = () => {
 
       return newTimers;
     });
-  }, [numPhilosophers, philosopherAction, speed, philosophers, starvationTime, selectNextPhilosopher]);
+  }, [numPhilosophers, philosopherAction, speed, philosophers, starvationTime]);
 
   useEffect(() => {
     let interval;
@@ -310,7 +281,9 @@ const DiningPhilosophers = () => {
                   {owner + 1}
                 </div>
               )}
-              
+              <div className="text-xs mt-1">
+                {leftPhilosopher + 1}/{rightPhilosopher + 1}
+              </div>
             </div>
           );
         })}
@@ -346,19 +319,6 @@ const DiningPhilosophers = () => {
           <StepForward size={20} />
           <span className="ml-2">Step</span>
         </button>
-      </div>
-      <div className="mb-4">
-        <label className="block mb-2">Action Strategy:</label>
-        <Select value={actionStrategy} onValueChange={setActionStrategy}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select strategy" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="random">Random</SelectItem>
-            <SelectItem value="round-robin">Round-Robin</SelectItem>
-            <SelectItem value="prioritize-starving">Prioritize Starving</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
       <div className="mt-4 p-4 bg-gray-100 rounded">
         <h2 className="text-lg font-semibold mb-2">Debug Information</h2>
