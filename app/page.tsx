@@ -62,7 +62,7 @@ const DiningPhilosophers = () => {
         forks[i] = -1;
       }
     }
-  });
+  }, [numPhilosophers]);
 
   // When app is initialized, reset
   useEffect(() => {
