@@ -54,14 +54,18 @@ const DiningPhilosophers = () => {
     setExplanation('Simulation reset. All greedy philosophers are holding a fork.');
     setCurrentPhilosopher(-1);
 
-    for (let i = 0; i < numPhilosophers; i++) {
-      if (behaviors[i] === 'greedy') {
-        forks[i] = i;
+    const newForks = Array(numPhilosophers).fill(-1);
+
+    // Make each greedy philosopher grab left fork
+    setBehaviors(prevBehaviors => {
+      for (let i = 0; i < numPhilosophers; i++) {
+        if (prevBehaviors[i] === 'greedy') {
+          newForks[i] = i;
+        }
+        setForks(newForks);
       }
-      else {
-        forks[i] = -1;
-      }
-    }
+      return prevBehaviors;
+    }); 
   }, [numPhilosophers]);
 
   // When app is initialized, reset
