@@ -24,6 +24,8 @@ const DiningPhilosophers = () => {
   const [failedAttempts, setFailedAttempts] = useState<number[]>([]);
   const [thinkingTimes, setThinkingTimes] = useState<number[]>([]);
   const [totalThinkingTime, setTotalThinkingTime] = useState<number[]>([]);
+  const [totalEatingTime, setTotalEatingTime] = useState<number[]>([]);
+  const [eatingTimers, setEatingTimers] = useState<number[]>([]);
 
   // Scheduling
   const [schedulingAlgorithm, setSchedulingAlgorithm] = useState('round-robin');
@@ -33,11 +35,13 @@ const DiningPhilosophers = () => {
     setPhilosophers(Array(numPhilosophers).fill('thinking'));
     setForks(Array(numPhilosophers).fill(-1));
     setTimers(Array(numPhilosophers).fill(0));
+    setEatingTimers(Array(numPhilosophers).fill(0));
     setBehaviors(Array(numPhilosophers).fill('greedy'));
     setEatenCount(Array(numPhilosophers).fill(0));
     setFailedAttempts(Array(numPhilosophers).fill(0));
     setThinkingTimes(Array(numPhilosophers).fill([]));
     setTotalThinkingTime(Array(numPhilosophers).fill(0));
+    setTotalEatingTime(Array(numPhilosophers).fill(0));
     setIsRunning(false);
     setExplanation('Simulation reset. All philosophers are thinking.');
     setCurrentPhilosopher(-1);
@@ -46,10 +50,12 @@ const DiningPhilosophers = () => {
   const resetSimulationDeadlock = useCallback(() => {
     setPhilosophers(Array(numPhilosophers).fill('thinking'));
     setTimers(Array(numPhilosophers).fill(0));
+    setEatingTimers(Array(numPhilosophers).fill(0));
     setEatenCount(Array(numPhilosophers).fill(0));
     setFailedAttempts(Array(numPhilosophers).fill(0));
     setThinkingTimes(Array(numPhilosophers).fill([]));
     setTotalThinkingTime(Array(numPhilosophers).fill(0));
+    setTotalEatingTime(Array(numPhilosophers).fill(0));
     setIsRunning(false);
     setExplanation('Simulation reset. All greedy philosophers are holding a fork.');
     setCurrentPhilosopher(-1);
@@ -108,6 +114,11 @@ const DiningPhilosophers = () => {
             newTimers[index] = 0;
             return newTimers;
           });
+          setEatingTimers(prevTimers => {
+            const newTimers = [...prevTimers];
+            newTimers[index] = 0;
+            return newTimers;
+          });
           setEatenCount(prev => {
             const newCount = [...prev];
             newCount[index]++;
@@ -145,6 +156,7 @@ const DiningPhilosophers = () => {
               return newForks;
             });
 
+            console.log(pickedUpForks);
             if (pickedUpForks === 1) {
               setExplanation(`Greedy Philosopher ${index + 1} picked up one fork and is waiting for the other.`);
             } else {
@@ -155,6 +167,13 @@ const DiningPhilosophers = () => {
           }
         }
       } else if (newState[index] === 'eating') {
+        // Add eatingTime to total
+        setTotalEatingTime(prev => {
+          const newTotal = [...prev];
+          newTotal[index] += eatingTimers[index];
+          return newTotal;
+        });
+
         // Release both forks and go back to thinking
         newState[index] = 'thinking';
         setForks(prevForks => {
@@ -168,7 +187,7 @@ const DiningPhilosophers = () => {
 
       return newState;
     });
-  }, [forks, numPhilosophers, behaviors, timers]);
+  }, [forks, numPhilosophers, behaviors, timers, eatingTimers]);
 
   const simulationTick = useCallback(() => {
     const selectedPhilosopher = selectNextPhilosopher();
@@ -204,6 +223,17 @@ const DiningPhilosophers = () => {
 
       return newTimers;
     });
+
+    // Update eating timers
+    setEatingTimers(prevTimers => {
+      return prevTimers.map((timer, index) => {
+        if (philosophers[index] === 'eating') {
+          return timer + speed / 1000;
+        }
+        return timer;
+      });
+    });
+
   }, [numPhilosophers, philosopherAction, speed, philosophers, starvationTime, selectNextPhilosopher]);
 
   useEffect(() => {
@@ -412,6 +442,7 @@ const DiningPhilosophers = () => {
               <th>Times Eaten</th>
               <th>Failed Attempts</th>
               <th>Avg. Thinking Time</th>
+              <th>Avg. Eating Time</th>
             </tr>
           </thead>
           <tbody>
@@ -423,6 +454,11 @@ const DiningPhilosophers = () => {
                 <td>
                   {eatenCount[index] > 0
                     ? (totalThinkingTime[index] / eatenCount[index]).toFixed(2)
+                    : 'N/A'}
+                </td>
+                <td>
+                  {eatenCount[index] > 0
+                    ? (totalEatingTime[index] / eatenCount[index]).toFixed(2)
                     : 'N/A'}
                 </td>
               </tr>
