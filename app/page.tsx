@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Play, Pause, RotateCcw, StepForward } from 'lucide-react';
 
 const DiningPhilosophers = () => {
-  const [numPhilosophers, setNumPhilosophers] = useState(5);
+  const [numPhilosophers, setNumPhilosophers] = useState(3);
   const [philosophers, setPhilosophers] = useState([]);
   const [forks, setForks] = useState([]);
   const [timers, setTimers] = useState([]);
@@ -23,8 +23,8 @@ const DiningPhilosophers = () => {
   const [totalThinkingTime, setTotalThinkingTime] = useState([]);
 
   // New state for action strategy
-  const [actionStrategy, setActionStrategy] = useState('random');
-  const [currentPhilosopher, setCurrentPhilosopher] = useState(0);
+  const [actionStrategy, setActionStrategy] = useState('round-robin');
+  const [currentPhilosopher, setCurrentPhilosopher] = useState(-1);
 
   const resetSimulation = useCallback(() => {
     // @ts-expect-error "todo: fix type error"
@@ -37,7 +37,7 @@ const DiningPhilosophers = () => {
     setTimers(Array(numPhilosophers).fill(0));
 
     // @ts-expect-error "todo: fix type error"
-    setStrategies(Array(numPhilosophers).fill('normal'));
+    setStrategies(Array(numPhilosophers).fill('greedy'));
 
     // @ts-expect-error "todo: fix type error"
     setEatenCount(Array(numPhilosophers).fill(0));
@@ -53,7 +53,7 @@ const DiningPhilosophers = () => {
 
     setIsRunning(false);
     setExplanation('Simulation reset. All philosophers are thinking.');
-    setCurrentPhilosopher(0);
+    setCurrentPhilosopher(-1);
   }, [numPhilosophers]);
 
   useEffect(() => {
@@ -68,16 +68,6 @@ const DiningPhilosophers = () => {
         const next = (currentPhilosopher + 1) % numPhilosophers;
         setCurrentPhilosopher(next);
         return next;
-      case 'prioritize-starving':
-        let maxTimer = -1;
-        let starvingPhilosopher = 0;
-        timers.forEach((timer, index) => {
-          if (philosophers[index] === 'thinking' && timer > maxTimer) {
-            maxTimer = timer;
-            starvingPhilosopher = index;
-          }
-        });
-        return starvingPhilosopher;
       default:
         return 0;
     }
@@ -93,7 +83,7 @@ const DiningPhilosophers = () => {
       if (newState[index] === 'thinking') {
         const canEat = forks[leftFork] === null && forks[rightFork] === null;
 
-        if (canEat || (strategies[index] === 'greedy' && forks[leftFork] === index && forks[rightFork] === index)) {
+        if (canEat || (strategies[index] === 'greedy' && (forks[leftFork] === index || forks[leftFork] === null) && (forks[rightFork] === index) || forks[rightFork] === null)) {
           // @ts-expect-error "todo: fix type error"
           newState[index] = 'eating';
           setForks(prevForks => {
@@ -252,7 +242,6 @@ const DiningPhilosophers = () => {
   const getStrategyColor = (strategy) => {
     switch (strategy) {
       case 'normal': return 'bg-blue-200';
-      case 'polite': return 'bg-green-200';
       case 'greedy': return 'bg-red-200';
       default: return 'bg-blue-200';
     }
@@ -264,9 +253,7 @@ const DiningPhilosophers = () => {
       const newStrategies = [...prev];
       switch (newStrategies[index]) {
         // @ts-expect-error "todo: fix type error"
-        case 'normal': newStrategies[index] = 'polite'; break;
-          // @ts-expect-error "todo: fix type error"
-        case 'polite': newStrategies[index] = 'greedy'; break;
+        case 'normal': newStrategies[index] = 'greedy'; break;
           // @ts-expect-error "todo: fix type error"
         case 'greedy': newStrategies[index] = 'normal'; break;
       }
@@ -294,9 +281,9 @@ const DiningPhilosophers = () => {
         <Slider
           value={[speed]}
           onValueChange={(value) => setSpeed(value[0])}
-          min={100}
+          min={10}
           max={2000}
-          step={100}
+          step={10}
           className="w-64"
         />
         <span className="ml-2">{speed} ms</span>
@@ -361,6 +348,10 @@ const DiningPhilosophers = () => {
           );
         })}
       </div>
+      <br />
+      <br />
+      <br />
+      <br />
       <div className="text-center mb-4 h-12">
         <p className="font-semibold">{explanation}</p>
       </div>
@@ -394,15 +385,14 @@ const DiningPhilosophers = () => {
         </button>
       </div>
       <div className="mb-4">
-        <label className="block mb-2">Action Strategy:</label>
+        <label className="block mb-2">Scheduling Algorithm:</label>
         <Select value={actionStrategy} onValueChange={setActionStrategy}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select strategy" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="random">Random</SelectItem>
             <SelectItem value="round-robin">Round-Robin</SelectItem>
-            <SelectItem value="prioritize-starving">Prioritize Starving</SelectItem>
+            <SelectItem value="random">Random</SelectItem>
           </SelectContent>
         </Select>
       </div>
