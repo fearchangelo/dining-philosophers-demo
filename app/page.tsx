@@ -6,55 +6,71 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Play, Pause, RotateCcw, StepForward } from 'lucide-react';
 
 const DiningPhilosophers = () => {
+  // Philosophers
   const [numPhilosophers, setNumPhilosophers] = useState(3);
   const [philosophers, setPhilosophers] = useState<string[]>([]);
   const [forks, setForks] = useState<number[]>([]);
   const [timers, setTimers] = useState<number[]>([]);
-  const [strategies, setStrategies] = useState<string[]>([]);
+  const [behaviors, setBehaviors] = useState<string[]>([]);
+  const [starvationTime, setStarvationTime] = useState(10);
+
+  // Simulation
   const [isRunning, setIsRunning] = useState(false);
   const [speed, setSpeed] = useState(1000);
-  const [starvationTime, setStarvationTime] = useState(10);
   const [explanation, setExplanation] = useState('Simulation not started');
   
-  // New state variables for statistics
+  // Statistics
   const [eatenCount, setEatenCount] = useState<number[]>([]);
   const [failedAttempts, setFailedAttempts] = useState<number[]>([]);
   const [thinkingTimes, setThinkingTimes] = useState<number[]>([]);
   const [totalThinkingTime, setTotalThinkingTime] = useState<number[]>([]);
 
-  // New state for action strategy
-  const [actionStrategy, setActionStrategy] = useState('round-robin');
+  // Scheduling
+  const [schedulingAlgorithm, setSchedulingAlgorithm] = useState('round-robin');
   const [currentPhilosopher, setCurrentPhilosopher] = useState(-1);
 
   const resetSimulation = useCallback(() => {
-    
     setPhilosophers(Array(numPhilosophers).fill('thinking'));
-
     setForks(Array(numPhilosophers).fill(-1));
-
     setTimers(Array(numPhilosophers).fill(0));
-
-    setStrategies(Array(numPhilosophers).fill('greedy'));
-
+    setBehaviors(Array(numPhilosophers).fill('greedy'));
     setEatenCount(Array(numPhilosophers).fill(0));
-
     setFailedAttempts(Array(numPhilosophers).fill(0));
-
     setThinkingTimes(Array(numPhilosophers).fill([]));
-
     setTotalThinkingTime(Array(numPhilosophers).fill(0));
-
     setIsRunning(false);
     setExplanation('Simulation reset. All philosophers are thinking.');
     setCurrentPhilosopher(-1);
   }, [numPhilosophers]);
 
+  const resetSimulationDeadlock = useCallback(() => {
+    setPhilosophers(Array(numPhilosophers).fill('thinking'));
+    setTimers(Array(numPhilosophers).fill(0));
+    setEatenCount(Array(numPhilosophers).fill(0));
+    setFailedAttempts(Array(numPhilosophers).fill(0));
+    setThinkingTimes(Array(numPhilosophers).fill([]));
+    setTotalThinkingTime(Array(numPhilosophers).fill(0));
+    setIsRunning(false);
+    setExplanation('Simulation reset. All greedy philosophers are holding a fork.');
+    setCurrentPhilosopher(-1);
+
+    for (let i = 0; i < numPhilosophers; i++) {
+      if (behaviors[i] === 'greedy') {
+        forks[i] = i;
+      }
+      else {
+        forks[i] = -1;
+      }
+    }
+  });
+
+  // When app is initialized, reset
   useEffect(() => {
     resetSimulation();
   }, [numPhilosophers, resetSimulation]);
 
   const selectNextPhilosopher = useCallback(() => {
-    switch (actionStrategy) {
+    switch (schedulingAlgorithm) {
       case 'random':
         return Math.floor(Math.random() * numPhilosophers);
       case 'round-robin':
@@ -64,7 +80,7 @@ const DiningPhilosophers = () => {
       default:
         return 0;
     }
-  }, [actionStrategy, currentPhilosopher, numPhilosophers, timers, philosophers]);
+  }, [schedulingAlgorithm, currentPhilosopher, numPhilosophers]);
 
   const philosopherAction = useCallback((index : number) => {
     setPhilosophers(prev => {
@@ -75,7 +91,7 @@ const DiningPhilosophers = () => {
       if (newState[index] === 'thinking') {
         const canEat = forks[leftFork] === -1 && forks[rightFork] === -1;
 
-        if (canEat || (strategies[index] === 'greedy' && (forks[leftFork] === index || forks[leftFork] === -1) && (forks[rightFork] === index) || forks[rightFork] === -1)) {
+        if (canEat || (behaviors[index] === 'greedy' && (forks[leftFork] === index || forks[leftFork] === -1) && (forks[rightFork] === index) || forks[rightFork] === -1)) {
           newState[index] = 'eating';
           setForks(prevForks => {
             const newForks = [...prevForks];
@@ -95,7 +111,7 @@ const DiningPhilosophers = () => {
           });
           setThinkingTimes(prev => {
             const newTimes = [...prev];
-            newTimes[index] = timers[index];
+            newTimes[index] = 0;
             return newTimes;
           });
           setTotalThinkingTime(prev => {
@@ -110,7 +126,7 @@ const DiningPhilosophers = () => {
             newAttempts[index]++;
             return newAttempts;
           });
-          if (strategies[index] === 'greedy') {
+          if (behaviors[index] === 'greedy') {
             let pickedUpForks = 0;
             setForks(prevForks => {
               const newForks = [...prevForks];
@@ -135,6 +151,7 @@ const DiningPhilosophers = () => {
           }
         }
       } else if (newState[index] === 'eating') {
+        // Release both forks and go back to thinking
         newState[index] = 'thinking';
         setForks(prevForks => {
           const newForks = [...prevForks];
@@ -147,7 +164,7 @@ const DiningPhilosophers = () => {
 
       return newState;
     });
-  }, [forks, numPhilosophers, strategies, timers]);
+  }, [forks, numPhilosophers, behaviors, timers]);
 
   const simulationTick = useCallback(() => {
     const selectedPhilosopher = selectNextPhilosopher();
@@ -162,12 +179,15 @@ const DiningPhilosophers = () => {
       });
 
       newTimers.forEach((timer, index) => {
+        // Check for starvation and apply dead state
         if (timer >= starvationTime && philosophers[index] !== 'dead') {
           setPhilosophers(prev => {
             const newState = [...prev];
             newState[index] = 'dead';
             return newState;
           });
+
+          // Dead philosopher's release forks when they die
           setForks(prevForks => {
             const newForks = [...prevForks];
             if (newForks[index] === index) newForks[index] = -1;
@@ -206,22 +226,22 @@ const DiningPhilosophers = () => {
     return 'text-green-500';
   };
 
-  const getStrategyColor = (strategy : string) => {
-    switch (strategy) {
+  const getBehaviorColor = (behavior : string) => {
+    switch (behavior) {
       case 'normal': return 'bg-blue-200';
       case 'greedy': return 'bg-red-200';
       default: return 'bg-blue-200';
     }
   };
 
-  const cycleStrategy = (index : number) => {
-    setStrategies(prev => {
-      const newStrategies = [...prev];
-      switch (newStrategies[index]) {
-        case 'normal': newStrategies[index] = 'greedy'; break;
-        case 'greedy': newStrategies[index] = 'normal'; break;
+  const cycleBehavior = (index : number) => {
+    setBehaviors(prev => {
+      const newBehaviors = [...prev];
+      switch (newBehaviors[index]) {
+        case 'normal': newBehaviors[index] = 'greedy'; break;
+        case 'greedy': newBehaviors[index] = 'normal'; break;
       }
-      return newStrategies;
+      return newBehaviors;
     });
   };
 
@@ -274,13 +294,13 @@ const DiningPhilosophers = () => {
               key={index}
               className={`absolute w-16 h-16 rounded-full flex flex-col items-center justify-center transition-colors duration-300 ${
                 state === 'thinking' ? 'bg-blue-200' : state === 'eating' ? 'bg-green-200' : 'bg-gray-200'
-              } ${getStrategyColor(strategies[index])}`}
+              } ${getBehaviorColor(behaviors[index])}`}
               style={{ left: `${x}px`, top: `${y}px` }}
-              onClick={() => cycleStrategy(index)}
+              onClick={() => cycleBehavior(index)}
             >
               <div className="text-2xl">{getPhilosopherEmoji(state)}</div>
               <div className="text-xs font-semibold">{index + 1}</div>
-              <div className="text-xs">{strategies[index]}</div>
+              <div className="text-xs">{behaviors[index]}</div>
               {state !== 'dead' && (
                 <div className="absolute -bottom-6 text-xs font-semibold">
                   {(starvationTime - timers[index]).toFixed(1)}s
@@ -339,6 +359,13 @@ const DiningPhilosophers = () => {
         </button>
         <button
           className="px-4 py-2 bg-gray-200 rounded flex items-center"
+          onClick={resetSimulationDeadlock}
+        >
+          <RotateCcw size={20} />
+          <span className="ml-2">Reset w/ Deadlock</span>
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-200 rounded flex items-center"
           onClick={() => {
             setIsRunning(false);
             simulationTick();
@@ -350,9 +377,9 @@ const DiningPhilosophers = () => {
       </div>
       <div className="mb-4">
         <label className="block mb-2">Scheduling Algorithm:</label>
-        <Select value={actionStrategy} onValueChange={setActionStrategy}>
+        <Select value={schedulingAlgorithm} onValueChange={setSchedulingAlgorithm}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select strategy" />
+            <SelectValue placeholder="Select scheduling algorithm" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="round-robin">Round-Robin</SelectItem>
@@ -367,6 +394,9 @@ const DiningPhilosophers = () => {
         </div>
         <div>
           <strong>Philosophers:</strong> [{philosophers.join(', ')}]
+        </div>
+        <div>
+          <strong>Behaviors:</strong> [{behaviors.join(', ')}]
         </div>
       </div>
       <div className="mt-4 p-4 bg-gray-100 rounded">
