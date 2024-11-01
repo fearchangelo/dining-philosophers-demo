@@ -355,7 +355,7 @@ const DiningPhilosophers = () => {
               className={`absolute w-8 h-8 flex flex-col items-center justify-center transition-colors duration-300 ${getForkColor(index)}`}
               style={{ left: `${x}px`, top: `${y}px` }}
             >
-              🍴
+              🥄
               {owner !== null && (
                 <div className="text-xs font-bold mt-1 bg-white rounded-full w-4 h-4 flex items-center justify-center">
                   {owner + 1}
