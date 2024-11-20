@@ -7,7 +7,7 @@ import { Play, Pause, RotateCcw, StepForward } from 'lucide-react';
 
 const DiningPhilosophers = () => {
   // Philosophers
-  const [numPhilosophers, setNumPhilosophers] = useState(3);
+  const [numPhilosophers, setNumPhilosophers] = useState(5);
   const [philosophers, setPhilosophers] = useState<string[]>([]);
   const [forks, setForks] = useState<number[]>([]);
   const [timers, setTimers] = useState<number[]>([]);
@@ -36,7 +36,7 @@ const DiningPhilosophers = () => {
     setForks(Array(numPhilosophers).fill(-1));
     setTimers(Array(numPhilosophers).fill(0));
     setEatingTimers(Array(numPhilosophers).fill(0));
-    setBehaviors(Array(numPhilosophers).fill('greedy'));
+    setBehaviors(Array(numPhilosophers).fill('normal'));
     setEatenCount(Array(numPhilosophers).fill(0));
     setFailedAttempts(Array(numPhilosophers).fill(0));
     setThinkingTimes(Array(numPhilosophers).fill([]));
@@ -101,7 +101,7 @@ const DiningPhilosophers = () => {
       if (newState[index] === 'thinking') {
         const canEat = forks[leftFork] === -1 && forks[rightFork] === -1;
 
-        if (canEat || (behaviors[index] === 'greedy' && (forks[leftFork] === index || forks[leftFork] === -1) && (forks[rightFork] === index) || forks[rightFork] === -1)) {
+        if (canEat || (behaviors[index] === 'greedy' && (forks[leftFork] === index || forks[leftFork] === -1) && (forks[rightFork] === index || forks[rightFork] === -1))) {
           newState[index] = 'eating';
           setForks(prevForks => {
             const newForks = [...prevForks];
@@ -453,12 +453,12 @@ const DiningPhilosophers = () => {
                 <td>{failedAttempts[index]}</td>
                 <td>
                   {eatenCount[index] > 0
-                    ? (totalThinkingTime[index] / eatenCount[index]).toFixed(2)
+                    ? (totalThinkingTime[index]).toFixed(2) 
                     : 'N/A'}
                 </td>
                 <td>
                   {eatenCount[index] > 0
-                    ? (totalEatingTime[index] / eatenCount[index]).toFixed(2)
+                    ? (totalEatingTime[index]).toFixed(2)
                     : 'N/A'}
                 </td>
               </tr>
